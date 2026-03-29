@@ -1,14 +1,19 @@
 package com.yukeshkumar.user_management_service.model;
 
 import com.yukeshkumar.user_management_service.entity.RoleType;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.UUID;
 
 public class RegisterRequest {
     private UUID id;
     private String full_name;
+    @NotNull
     private String username;
+    @Email
     private String email;
+    @NotNull
     private String password;
     private RoleType role;
 

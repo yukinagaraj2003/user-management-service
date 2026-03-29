@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Pageable;
 
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 
@@ -54,31 +55,12 @@ public class UserController {
 
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
-        String token = userService.login(request);
-        return new ResponseEntity<>(new AuthResponse(token), HttpStatus.OK);
-    }
 
-    @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> getToken(@RequestBody RefreshToken refreshToken) {
-        try {
-            String oldToken = refreshToken.getToken();
-            if (jwtUtility.isTokenExpired(oldToken)) {
-                return new ResponseEntity<>(new AuthResponse("token expired,login again"), HttpStatus.UNAUTHORIZED);
-            }
 
-            UUID userId = jwtUtility.extractUserId(oldToken);
-            CustomUserDetails customUserDetails = (CustomUserDetails) customUserDetailsService.loadUserById(userId);
-            String newToken = jwtUtility.generateToken(customUserDetails);
-            return new ResponseEntity<>(new AuthResponse(newToken), HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(new AuthResponse("Invalid token"), HttpStatus.FORBIDDEN);
-        }
-    }
+
 
     @PostMapping
-    public ResponseEntity<UserResponse> createUser(@RequestBody RegisterRequest request) {
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody RegisterRequest request) {
         UserResponse result = userService.createUser(request);
         return new ResponseEntity<>(result, HttpStatus.CREATED);
     }
