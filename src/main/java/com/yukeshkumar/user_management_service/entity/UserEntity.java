@@ -39,6 +39,17 @@ public class UserEntity {
     @Column(name = "updated_by")
     @JsonIgnore
     private String updatedBy;
+    @Column(name = "created_by", updatable = false,columnDefinition = "CHAR(36)")
+    @JsonIgnore
+    private UUID createdBy;
+
+    public UUID getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(UUID  createdBy) {
+        this.createdBy = createdBy;
+    }
 
     public UUID getId() {
         return id;

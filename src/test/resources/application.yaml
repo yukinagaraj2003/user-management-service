@@ -22,7 +22,7 @@ spring:
       replace: none
 
 server:
-  port: 0  # Random port for testing
+  port:8081
 
 logging:
   level:

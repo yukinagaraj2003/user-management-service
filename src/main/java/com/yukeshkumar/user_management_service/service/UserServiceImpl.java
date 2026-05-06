@@ -1,5 +1,6 @@
 package com.yukeshkumar.user_management_service.service;
 
+import com.yukeshkumar.user_management_service.entity.RoleType;
 import com.yukeshkumar.user_management_service.entity.UserEntity;
 import com.yukeshkumar.user_management_service.exception.UserAlreadyExistsException;
 import com.yukeshkumar.user_management_service.mapper.UserMapper;
@@ -13,6 +14,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import com.yukeshkumar.user_management_service.model.UserResponse;
+
+import java.util.UUID;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -30,19 +33,55 @@ public class UserServiceImpl implements UserService {
         this.userMapper = userMapper;
     }
 
-    public UserResponse createUser(RegisterRequest request) {
+    public UserResponse createUser(RegisterRequest request, UUID userId) {
+
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
             throw new UserAlreadyExistsException("User already exists");
         }
-        UserEntity userEntity = userMapper.convertDtoToEntity(request);
-        UserEntity savedEntity = userRepository.save(userEntity);
-        return userMapper.convertEntityToUserResponse(savedEntity);
 
+        UserEntity creator = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Creator not found"));
+
+        RoleType creatorRole = creator.getRole();
+        RoleType requestedRole = request.getRole();
+
+        if (requestedRole == RoleType.ROLE_ADMIN &&
+                creatorRole != RoleType.ROLE_SUPER_ADMIN) {
+            throw new RuntimeException("Only SUPER_ADMIN can create ADMIN");
+        }
+
+        if (requestedRole == RoleType.ROLE_MANAGER &&
+                creatorRole == RoleType.ROLE_USER) {
+            throw new RuntimeException("USER cannot create MANAGER");
+        }
+
+        UserEntity userEntity = userMapper.convertDtoToEntity(request);
+        userEntity.setCreatedBy(userId);
+
+        return userMapper.convertEntityToUserResponse(
+                userRepository.save(userEntity)
+        );
     }
 
     public String login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getUsername(),
+                        request.getPassword()
+                )
+        );
+
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        return jwtUtility.generateToken(userDetails);
+
+        String role = userDetails.getAuthorities()
+                .iterator()
+                .next()
+                .getAuthority();
+
+        return jwtUtility.generateToken(
+                userDetails.getId(),
+                role
+        );
     }
 }

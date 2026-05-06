@@ -1,7 +1,6 @@
 package com.yukeshkumar.user_management_service;
 
-import com.yukeshkumar.user_management_service.security.JwtAuthFilter;
-import com.yukeshkumar.user_management_service.security.JwtUtility;
+import com.yukeshkumar.user_management_service.security.JwtAuthenticationFilter;
 import com.yukeshkumar.user_management_service.service.CustomUserDetailsService;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -18,9 +17,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @TestConfiguration
 public class TestSecurityConfig {
 
-    private final JwtAuthFilter jwtAuthFilter;
+    private final JwtAuthenticationFilter jwtAuthFilter;
 
-    public TestSecurityConfig(JwtAuthFilter jwtAuthFilter) {
+    public TestSecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
     }
 

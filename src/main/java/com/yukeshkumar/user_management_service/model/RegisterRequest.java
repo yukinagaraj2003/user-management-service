@@ -15,6 +15,7 @@ public class RegisterRequest {
     private String email;
     @NotNull
     private String password;
+
     private RoleType role;
 
     public RegisterRequest() {
@@ -44,13 +45,6 @@ public class RegisterRequest {
         this.username = username;
     }
 
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
 
     public String getEmail() {
         return email;
@@ -66,5 +60,13 @@ public class RegisterRequest {
 
     public void setRole(RoleType role) {
         this.role = role;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }

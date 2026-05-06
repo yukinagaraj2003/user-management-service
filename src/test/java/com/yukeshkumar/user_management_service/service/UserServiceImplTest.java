@@ -15,7 +15,10 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,9 +43,12 @@ class UserServiceImplTest {
     @InjectMocks
     private UserServiceImpl userServiceImpl;
 
+    private UUID creatorId;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        creatorId = UUID.randomUUID();
     }
 
     @Test
@@ -54,6 +60,10 @@ class UserServiceImplTest {
         request.setFull_name("New User");
         request.setRole(RoleType.ROLE_USER);
 
+        UserEntity creatorEntity = new UserEntity();
+        creatorEntity.setId(creatorId);
+        creatorEntity.setRole(RoleType.ROLE_SUPER_ADMIN);
+
         UserEntity userEntity = new UserEntity();
         userEntity.setId(UUID.randomUUID());
         userEntity.setUsername("newuser");
@@ -62,11 +72,13 @@ class UserServiceImplTest {
         expectedResponse.setUsername("newuser");
 
         when(userRepository.findByUsername("newuser")).thenReturn(Optional.empty());
+        when(userRepository.findById(creatorId)).thenReturn(Optional.of(creatorEntity));
         when(userMapper.convertDtoToEntity(request)).thenReturn(userEntity);
         when(userRepository.save(userEntity)).thenReturn(userEntity);
         when(userMapper.convertEntityToUserResponse(userEntity)).thenReturn(expectedResponse);
 
-        UserResponse result = userServiceImpl.createUser(request);
+
+        UserResponse result = userServiceImpl.createUser(request, creatorId);
 
         assertNotNull(result);
         assertEquals("newuser", result.getUsername());
@@ -84,7 +96,8 @@ class UserServiceImplTest {
 
         when(userRepository.findByUsername("existinguser")).thenReturn(Optional.of(existingUser));
 
-        assertThrows(UserAlreadyExistsException.class, () -> userServiceImpl.createUser(request));
+
+        assertThrows(UserAlreadyExistsException.class, () -> userServiceImpl.createUser(request, creatorId));
         verify(userRepository).findByUsername("existinguser");
         verify(userRepository, never()).save(any());
     }
@@ -95,17 +108,24 @@ class UserServiceImplTest {
         request.setUsername("testuser");
         request.setPassword("password");
 
-        CustomUserDetails userDetails = new CustomUserDetails(UUID.randomUUID(), "testuser", "password", null);
+        UUID userId = UUID.randomUUID();
+        Collection<GrantedAuthority> authorities = Collections.singletonList(
+                () -> "ROLE_USER"
+        );
+        CustomUserDetails userDetails = new CustomUserDetails(userId, "testuser", "password", authorities);
         Authentication authentication = mock(Authentication.class);
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
         when(authentication.getPrincipal()).thenReturn(userDetails);
-        when(jwtUtility.generateToken(userDetails)).thenReturn("jwt-token");
+
+        when(jwtUtility.generateToken(userId, "ROLE_USER")).thenReturn("jwt-token");
 
         String token = userServiceImpl.login(request);
 
         assertEquals("jwt-token", token);
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-        verify(jwtUtility).generateToken(userDetails);
+     
+        verify(jwtUtility).generateToken(userId, "ROLE_USER");
     }
+
 }

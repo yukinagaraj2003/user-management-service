@@ -13,76 +13,56 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.UUID;
-
-
 @Component
 public class JwtUtility {
 
     private final SecretKey key;
     private final long expiration;
 
-    public JwtUtility(@Value("${jwt.secret}") String secret,
-                      @Value("${jwt.expiration}") long expiration) {
-
+    public JwtUtility(
+            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.expiration}") long expiration
+    ) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expiration = expiration;
     }
 
-    public String generateToken(CustomUserDetails userDetails) {
-
+    public String generateToken(UUID userId, String role) {
         return Jwts.builder()
-                .subject(userDetails.getId().toString())
-                .claim("role", userDetails.getAuthorities().iterator().next().getAuthority())
+                .subject(userId.toString())
+                .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(key)
                 .compact();
     }
 
-    public String extractUsername(String token) {
-        Claims claims = Jwts.parser()
+    private Claims getClaims(String token) {
+        return Jwts.parser()
                 .verifyWith(key)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-
-        return claims.getSubject();
     }
 
-    public UUID extractUserId(String token) {
-        Claims claims = Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
-
-        String id = claims.getSubject();
-        return UUID.fromString(id);
+    public UUID getUserId(String token) {
+        return UUID.fromString(getClaims(token).getSubject());
     }
 
-    public String extractRole(String token) {
-        Claims claims = Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
-
-        return claims.get("role", String.class);
+    public String getRole(String token) {
+        return getClaims(token).get("role", String.class);
     }
 
-    public boolean isTokenExpired(String token) {
+    public boolean isValid(String token) {
         try {
-            Date expiration = Jwts.parser()
-                    .setSigningKey(key)
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody()
-                    .getExpiration();
-
-            return expiration.before(new Date());
-
-        } catch (ExpiredJwtException e) {
+            getClaims(token);
             return true;
+        } catch (Exception e) {
+            return false;
         }
+    }
+
+    public boolean isExpired(String token) {
+        return getClaims(token).getExpiration().before(new Date());
     }
 }
